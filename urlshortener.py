@@ -6,7 +6,9 @@ from flask_pymongo import PyMongo
 from bson.json_util import dumps
 from json import loads
 from flask_restful import reqparse, abort, Api, Resource
+import validators
 ########################################Constants#####################################################
+DOMAIN="http://localhost:5000/"
 BASE=64 ## this project will map the decimal id numbers of url database entries into base64
 MAP = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-" ## these are the characters to be mapped
 ## Note the more you increase the base the shorter the URL becomes. 64 was picked because that's
@@ -18,6 +20,8 @@ db = client.flask_db
 urls = db.URLs
 app = Flask(__name__)
 api = Api(app)
+##initialize cache##
+cache={}
 ######################################################################################################
 ## nextId is the id of the next element to be stored in the database. nextId is incremented every time
 ## we add a new row to the collection. When the server restarts for whatever reason, it retrieves
@@ -40,6 +44,13 @@ def idToShortURL(id): ## Map Id into base64
 ## Invoke this if user enters an unknown path
 def abortion(pth):
         abort(404, message="Doesn't exist :(".format(pth))
+def isAlias(alias):
+    if len(alias)>5 or len(alias)<1 or loads(dumps(urls.find({'alias':alias})))!=[]:
+        return False
+    for i in alias:
+        if i not in MAP:
+            return False
+    return True
 ############################Add arguments entered by the user to the parser#########################
 parser = reqparse.RequestParser()
 parser.add_argument('alias')
@@ -49,18 +60,42 @@ class Create(Resource):
     def post(self):
         global nextId # Do not create a local variable called nextId. Make it global.
         args = parser.parse_args()
-        urls.insert_one({'_id':nextId,'url': args['url'], 'short': idToShortURL(nextId)})
+        errors=[]
+        code=0
+        alias=idToShortURL(nextId)
+        if args['alias']==None:
+            rslt=loads(dumps(urls.find({'alias':alias})))
+            if rslt!=[]:
+                alias=idToShortURL(int(rslt[0]['_id']))
+        elif not isAlias(args['alias']) :
+            errors.append("Invalid or taken alias")
+            code=1
+        else:
+            alias=args['alias']
+        if args['url']==None or not validators.url(args['url']):
+            errors.append("Invalid URL")
+            code=1
+        if code>0:
+            return {"code":code,"data":[],"errors":errors}
+        record={'_id':nextId,'url': args['url'], 'alias': alias, 'short_url':DOMAIN+idToShortURL(nextId),"deleted":0,"code":code,"errors":errors}
+        urls.insert_one(record)
         nextId+=1
-        return "http://localhost:5000/"+idToShortURL(nextId)
+        return record
 ###
 ## find the short url in the database and redirect the user to the original URL if found
 ##
 class Redir(Resource):
     def get(self,pth):
-        rslt=loads(dumps(urls.find({'short':pth})))
-        if rslt==[]:
-            abortion(pth)
-        return redirect(rslt[0]['url'])
+        if pth in cache.keys():
+            cache[pth][0]+=1
+        else:
+            rslt=loads(dumps(urls.find({'alias':pth})))
+            if rslt==[]:
+                abortion(pth)
+            if len(cache)>(nextId+1)*0.2:
+                cache.pop(min(cache, key=cache.get))
+            cache[pth]=[1,rslt[0]['url']]
+        return redirect(cache[pth][1])
 
 ##
 ## setup the Api resource routing here
