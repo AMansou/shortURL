@@ -1,0 +1,2 @@
+mongodb+srv://sourMadMan:4HV2Y7Bq91VruPKi@cluster0.jmeohut.mongodb.net/?retryWrites=true&w=majority
+http://localhost:5000/

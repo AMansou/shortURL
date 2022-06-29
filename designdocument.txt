@@ -1,0 +1,22 @@
+This app is concerned with transforming long URLs into short ones. Thus the encryption scheme is very important.
+Key considerations for the encryption scheme:
+1- The generated short link should be as short as possible
+2- The generated short link needs to be unique
+A hash function such as SHA256 could be used for such a purpose. However, using such a technique would mean that identical long URLs would generate the same short URL, which is no good.
+Though the latter problem can be solved in several ways, Another appoach was chosen. The approach chosen for this project is to generate an incremental id for each new short URL request. This id could then be used to generate 
+the alias part of the short url, by converting it to base64. The reason base 64 was chosen as opposed to other bases is because the possible characters that can be mapped from base64 are the alphabet letters (26), the alphabet letters capitalized (26) and decimal digits (10). 2 more characters were added because the larger the base, the less characters in we would need to represent it in a URL. using 5 letters, we can represent up to 5^64 ~= 1B URLS. This is more than enough for our requirements.
+ If the user hasn't provided an alias, we should check if the generated alias is already in the db. If it is, it means that a user has provided that alias before, so we need to generate a different alias from the id of the alias that took the old one.
+Instead of deleting entries from the database, each entry can be marked as deleted or not. Whenever we need to insert a new alias, we should first check if one of the entries in the database is marked as deleted so we could use it instead of creating a new entry.
+
+
+noSQL was used in this project because of two main reasons:
+1-noSQL is a lot more scalable than SQL. We can easily add new columns should the need arise.
+2-There is no relational data in this project so it's futile to use SQL.
+The schema for such a databse would be collection (URL) that contains the following fields: id (varchar-pk), url (varchar), alias (varchar),short_url (varchar) and deleted(varchar).
+Since the Django package doesn't support noSQL, Flask was selected in its stead. Mongodb was also chosen as the noSQL database of choice.
+
+A cache was implemented using a python dictionary and a least-frequently-used (LFU) eviction policy. The dictionary is limited to be 20% of the size of the database since it's said that 20% of online urls generate 80% of traffic.
+
+The API endpoints of this service are described in depth inside the APIDocumentation.txt file
+
+ 

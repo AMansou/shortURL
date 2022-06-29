@@ -1,0 +1,22 @@
+This API contains two endpoints:
+1- "Create" endpoint:<domain name>/create
+Description: create a new alias for a url
+Method: POST
+Arguments: a-full URL b-(optional) preferred alias
+Example: 
+curl http://localhost:5000/create -d "url=http://www.github.com&alias=o" -X POST
+Returns error code 422 on failure and 200 on success
+On failure, it will also include a JSON object containing a list of errors and an error code.
+On success it returns the alias that was created in JSON format.
+
+
+2- "alias" endpoint:<domain name>/alias/<alias>
+Description: View alias data
+Method: get
+Arguments: None
+Example:
+curl http://localhost:5000/alias/os -X GET
+Returns error code 421 on failure and 200 on success
+On failure, it will also include a JSON object containing a list of errors and $
+On success it returns the alias's information  in JSON format.
+
