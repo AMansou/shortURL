@@ -8,14 +8,20 @@ from json import loads
 from flask_restful import reqparse, abort, Api, Resource
 import validators
 ########################################Constants#####################################################
-DOMAIN="http://localhost:5000/"
 BASE=64 ## this project will map the decimal id numbers of url database entries into base64
 MAP = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-" ## these are the characters to be mapped
+INPUT="input.txt"
 ## Note the more you increase the base the shorter the URL becomes. 64 was picked because that's
 ## The number of characters we want to map the id into.
 ######################Connecting to Mongodv and initializing the Flask app############################
 app = Flask(__name__)
-client = MongoClient("mongodb+srv://sourMadMan:4HV2Y7Bq91VruPKi@cluster0.jmeohut.mongodb.net/?retryWrites=true&w=majority")
+try:
+    with open(INPUT) as f_obj:
+        contents = f_obj.readline()
+        client = MongoClient(contents)
+        DOMAIN=f_obj.readline()
+except FileNotFoundError:
+    abort(404, message="Error opening file:(".format('INPUT'))
 db = client.flask_db
 urls = db.URLs
 app = Flask(__name__)
@@ -76,22 +82,33 @@ class Create(Resource):
             errors.append("Invalid URL")
             code=1
         if code>0:
-            return {"code":code,"data":[],"errors":errors}
+            return {"code":code,"data":[],"errors":errors},422
         record={'_id':nextId,'url': args['url'], 'alias': alias, 'short_url':DOMAIN+idToShortURL(nextId),"deleted":0,"code":code,"errors":errors}
         urls.insert_one(record)
         nextId+=1
         return record
+class Alias(Resource):
+    def get(self,pth):
+        rslt=loads(dumps(urls.find({'alias':pth})))
+        ##abort if empty
+        if rslt==[]:
+            return {'error':"No such alias",'code':2},421
+        return rslt[0]
+
 ###
 ## find the short url in the database and redirect the user to the original URL if found
 ##
 class Redir(Resource):
     def get(self,pth):
+        ## don't access the db if alias is found in cache
         if pth in cache.keys():
             cache[pth][0]+=1
         else:
             rslt=loads(dumps(urls.find({'alias':pth})))
+            ##abort if empty
             if rslt==[]:
                 abortion(pth)
+            ##only cache 20% of the database (20% of URLs generate 80% of traffic)
             if len(cache)>(nextId+1)*0.2:
                 cache.pop(min(cache, key=cache.get))
             cache[pth]=[1,rslt[0]['url']]
@@ -101,6 +118,7 @@ class Redir(Resource):
 ## setup the Api resource routing here
 ##
 api.add_resource(Create, '/create')
+api.add_resource(Alias, '/alias/<pth>')
 api.add_resource(Redir, '/<pth>')
 if __name__ == '__main__':
     app.run(debug=True)
