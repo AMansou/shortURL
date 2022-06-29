@@ -88,7 +88,7 @@ class Create(Resource):
             code=1
         if code>0:
             return {"code":code,"data":[],"errors":errors},422
-        record={'_id':nextId,'url': args['url'], 'alias': alias, 'short_url':DOMAIN+idToShortURL(nextId),"deleted":0,"code":code,"errors":errors}
+        record={'_id':nextId,'url': args['url'], 'alias': alias, 'short_url':DOMAIN+idToShortURL(nextId),"deleted":0}
         urls.insert_one(record)
         nextId+=1
         return record
