@@ -68,7 +68,12 @@ class Create(Resource):
         args = parser.parse_args()
         errors=[]
         code=0
+        #first turn nextid into alias
         alias=idToShortURL(nextId)
+        #If the user hasn't provided an alias, check if the generated alias is already in the db
+        #if it is, it means that a user has provided that alias before, so you need to generate a new Alias
+        #from the id that took this one.
+        ### Do some data validation and generate error messages as well.
         if args['alias']==None:
             rslt=loads(dumps(urls.find({'alias':alias})))
             if rslt!=[]:
