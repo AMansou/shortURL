@@ -1,14 +1,8 @@
 ########################################Imports#######################################################
 from flask import Flask, render_template, request, url_for, redirect
-from pymongo import MongoClient
-from flask import Flask
-from flask_pymongo import PyMongo
-from bson.json_util import dumps
-from json import loads
 from flask_restful import reqparse, abort, Api, Resource
-import validators
-import os
 import boto3
+import os
 ########################################Constants#####################################################
 BASE=64 ## this project will map the decimal id numbers of url database entries into base64
 MAP = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-" ## these are the characters to be mapped
@@ -16,7 +10,7 @@ INPUT="input.txt"
 ## Note the more you increase the base the shorter the URL becomes. 64 was picked because that's
 ## The number of characters we want to map the id into.
 ######################Connecting to Mongodv and initializing the Flask app############################
-DDB = boto3.client('dynamodb')
+DDB = boto3.client('dynamodb', region_name='us-east-1')
 app = Flask(__name__)
 api = Api(app)
 #########################################Useful Functions############################################
@@ -107,4 +101,4 @@ api.add_resource(Create, '/create')
 api.add_resource(Redir, '/<pth>')
 # api.add_resource(testing, '/<pth>')
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(threaded=True,host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
