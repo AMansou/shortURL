@@ -1,8 +1,8 @@
-FROM python:3.6 as builder
+FROM python:3.8-slim as builder
 COPY . /src
-RUN pip install --user  boto3 flask flask_restful
+RUN pip install --user fastapi uvicorn boto3 flask
 
-FROM python:3.6 as app
+FROM python:3.8-slim as app
 COPY --from=builder /root/.local /root/.local
 COPY --from=builder /src .
 
